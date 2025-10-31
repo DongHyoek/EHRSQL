@@ -1,0 +1,8 @@
+pandas==1.5.3
+dask
+scikit-learn
+func-timeout
+transformers==4.19.2 # 4.29.2 works too
+sentencepiece
+wandb # if needed
+install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu118

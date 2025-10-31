@@ -23,21 +23,15 @@ The dataset is released along with our paper titled [EHRSQL: A Practical Text-to
 
 ###  Requirments and Installation
 - Python version >= 3.7
-- Pytorch version == 1.7.1
+- Pytorch version == 2.5.1
 - SQLite3 version >= 3.33.0
 
 ```
 git clone https://github.com/glee4810/EHRSQL.git
 cd EHRSQL
-conda create -n ehrsql python=3.7
+conda create -n ehrsql python=3.9.7
 conda activate ehrsql
-pip install pandas==1.5.3
-pip install dask
-pip install scikit-learn
-pip install func-timeout
-pip install transformers==4.19.2 # 4.29.2 works too
-pip install sentencepiece
-pip install wandb # if needed
+pip install -r requirements.txt
 ```
 
 ### Dataset

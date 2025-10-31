@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 def parse_arguments():
     """Set up and return command line arguments."""
@@ -32,7 +33,7 @@ def process_database(args):
     else:
         raise ValueError(f"Unsupported database name: {args.db_name}")
 
-    db_builder = DB_Builder(data_dir=args.data_dir, out_dir=args.out_dir, db_name=args.db_name, 
+    db_builder = DB_Builder(data_dir=Path(args.data_dir), out_dir=Path(args.out_dir), db_name=args.db_name, 
                             num_patient=args.num_patient, sample_icu_patient_only=args.sample_icu_patient_only,
                             deid=args.deid, timeshift=args.timeshift, 
                             start_year=args.start_year, time_span=args.time_span, 

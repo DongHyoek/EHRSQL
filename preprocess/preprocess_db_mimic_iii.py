@@ -46,6 +46,8 @@ class Build_MIMIC_III(Sampler):
             self.start_pivot_datetime = datetime(year=self.start_year, month=1, day=1)
             self.time_span = time_span
             self.current_time = current_time
+        
+        print(os.path.join(self.out_dir, db_name + ".sqlite"))
 
         self.conn = sqlite3.connect(os.path.join(self.out_dir, db_name + ".sqlite"))
         self.cur = self.conn.cursor()
@@ -82,13 +84,13 @@ class Build_MIMIC_III(Sampler):
         start_time = time.time()
 
         # read patients
-        PATIENTS_table = read_csv(self.data_dir, "PATIENTS.csv", columns=["ROW_ID", "SUBJECT_ID", "GENDER", "DOB", "DOD"], lower=True)
+        PATIENTS_table = read_csv(self.data_dir, "PATIENTS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "GENDER", "DOB", "DOD"], lower=True)
         subjectid2dob = {pid: dob for pid, dob in zip(PATIENTS_table["SUBJECT_ID"].values, PATIENTS_table["DOB"].values)}
 
         # read admissions
         ADMISSIONS_table = read_csv(
             self.data_dir,
-            "ADMISSIONS.csv",
+            "ADMISSIONS.csv.gz",
             columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ADMITTIME", "DISCHTIME", "ADMISSION_TYPE", "ADMISSION_LOCATION", "DISCHARGE_LOCATION", "INSURANCE", "LANGUAGE", "MARITAL_STATUS", "ETHNICITY"],
             lower=True,
         )
@@ -122,7 +124,7 @@ class Build_MIMIC_III(Sampler):
 
         # read icustays
         ICUSTAYS_table = read_csv(
-            self.data_dir, "ICUSTAYS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "FIRST_CAREUNIT", "LAST_CAREUNIT", "FIRST_WARDID", "LAST_WARDID", "INTIME", "OUTTIME"], lower=True
+            self.data_dir, "ICUSTAYS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "FIRST_CAREUNIT", "LAST_CAREUNIT", "FIRST_WARDID", "LAST_WARDID", "INTIME", "OUTTIME"], lower=True
         )
         # subset only icu patients
         if self.sample_icu_patient_only:
@@ -130,7 +132,7 @@ class Build_MIMIC_III(Sampler):
 
         # read transfer
         TRANSFERS_table = read_csv(
-            self.data_dir, "TRANSFERS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "EVENTTYPE", "CURR_CAREUNIT", "CURR_WARDID", "INTIME", "OUTTIME"], lower=True
+            self.data_dir, "TRANSFERS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "EVENTTYPE", "CURR_CAREUNIT", "CURR_WARDID", "INTIME", "OUTTIME"], lower=True
         )
         TRANSFERS_table = TRANSFERS_table.rename(columns={"CURR_CAREUNIT": "CAREUNIT", "CURR_WARDID": "WARDID"})
         TRANSFERS_table = TRANSFERS_table.dropna(subset=["INTIME"])
@@ -225,10 +227,10 @@ class Build_MIMIC_III(Sampler):
         ICUSTAYS_table["ROW_ID"] = range(len(ICUSTAYS_table))
         TRANSFERS_table["ROW_ID"] = range(len(TRANSFERS_table))
 
-        PATIENTS_table.to_csv(os.path.join(self.out_dir, "PATIENTS.csv"), index=False)
-        ADMISSIONS_table.to_csv(os.path.join(self.out_dir, "ADMISSIONS.csv"), index=False)
-        ICUSTAYS_table.to_csv(os.path.join(self.out_dir, "ICUSTAYS.csv"), index=False)
-        TRANSFERS_table.to_csv(os.path.join(self.out_dir, "TRANSFERS.csv"), index=False)
+        PATIENTS_table.to_csv(os.path.join(self.out_dir, "PATIENTS.csv.gz"), index=False)
+        ADMISSIONS_table.to_csv(os.path.join(self.out_dir, "ADMISSIONS.csv.gz"), index=False)
+        ICUSTAYS_table.to_csv(os.path.join(self.out_dir, "ICUSTAYS.csv.gz"), index=False)
+        TRANSFERS_table.to_csv(os.path.join(self.out_dir, "TRANSFERS.csv.gz"), index=False)
 
         print(f"PATIENTS, ADMISSIONS, ICUSTAYS, TRANSFERS processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -236,18 +238,18 @@ class Build_MIMIC_III(Sampler):
         print("Processing D_ICD_DIAGNOSES, D_ICD_PROCEDURES, D_LABITEMS, D_ITEMS")
         start_time = time.time()
 
-        D_ICD_DIAGNOSES_table = read_csv(self.data_dir, "D_ICD_DIAGNOSES.csv", columns=["ROW_ID", "ICD9_CODE", "SHORT_TITLE", "LONG_TITLE"], lower=True)
+        D_ICD_DIAGNOSES_table = read_csv(self.data_dir, "D_ICD_DIAGNOSES.csv.gz", columns=["ROW_ID", "ICD9_CODE", "SHORT_TITLE", "LONG_TITLE"], lower=True)
         D_ICD_DIAGNOSES_table = D_ICD_DIAGNOSES_table.astype({"ICD9_CODE": str})
         self.D_ICD_DIAGNOSES_dict = {item: val for item, val in zip(D_ICD_DIAGNOSES_table["ICD9_CODE"].values, D_ICD_DIAGNOSES_table["SHORT_TITLE"].values)}
 
-        D_ICD_PROCEDURES_table = read_csv(self.data_dir, "D_ICD_PROCEDURES.csv", columns=["ROW_ID", "ICD9_CODE", "SHORT_TITLE", "LONG_TITLE"], lower=True)
+        D_ICD_PROCEDURES_table = read_csv(self.data_dir, "D_ICD_PROCEDURES.csv.gz", columns=["ROW_ID", "ICD9_CODE", "SHORT_TITLE", "LONG_TITLE"], lower=True)
         D_ICD_PROCEDURES_table = D_ICD_PROCEDURES_table.astype({"ICD9_CODE": str}).drop_duplicates(subset=["ICD9_CODE"])
         self.D_ICD_PROCEDURES_dict = {item: val for item, val in zip(D_ICD_PROCEDURES_table["ICD9_CODE"].values, D_ICD_PROCEDURES_table["SHORT_TITLE"].values)}
 
-        D_LABITEMS_table = read_csv(self.data_dir, "D_LABITEMS.csv", columns=["ROW_ID", "ITEMID", "LABEL"], lower=True)
+        D_LABITEMS_table = read_csv(self.data_dir, "D_LABITEMS.csv.gz", columns=["ROW_ID", "ITEMID", "LABEL"], lower=True)
         self.D_LABITEMS_dict = {item: val for item, val in zip(D_LABITEMS_table["ITEMID"].values, D_LABITEMS_table["LABEL"].values)}
 
-        D_ITEMS_table = read_csv(self.data_dir, "D_ITEMS.csv", columns=["ROW_ID", "ITEMID", "LABEL", "LINKSTO"], lower=True)
+        D_ITEMS_table = read_csv(self.data_dir, "D_ITEMS.csv.gz", columns=["ROW_ID", "ITEMID", "LABEL", "LINKSTO"], lower=True)
         D_ITEMS_table = D_ITEMS_table.dropna(subset=["LABEL"])
         D_ITEMS_table = D_ITEMS_table[D_ITEMS_table["LINKSTO"].isin(["inputevents_cv", "outputevents", "chartevents"])]
         self.D_ITEMS_dict = {item: val for item, val in zip(D_ITEMS_table["ITEMID"].values, D_ITEMS_table["LABEL"].values)}
@@ -257,10 +259,10 @@ class Build_MIMIC_III(Sampler):
         D_LABITEMS_table["ROW_ID"] = range(len(D_LABITEMS_table))
         D_ITEMS_table["ROW_ID"] = range(len(D_ITEMS_table))
 
-        D_ICD_DIAGNOSES_table.to_csv(os.path.join(self.out_dir, "D_ICD_DIAGNOSES.csv"), index=False)
-        D_ICD_PROCEDURES_table.to_csv(os.path.join(self.out_dir, "D_ICD_PROCEDURES.csv"), index=False)
-        D_LABITEMS_table.to_csv(os.path.join(self.out_dir, "D_LABITEMS.csv"), index=False)
-        D_ITEMS_table.to_csv(os.path.join(self.out_dir, "D_ITEMS.csv"), index=False)
+        D_ICD_DIAGNOSES_table.to_csv(os.path.join(self.out_dir, "D_ICD_DIAGNOSES.csv.gz"), index=False)
+        D_ICD_PROCEDURES_table.to_csv(os.path.join(self.out_dir, "D_ICD_PROCEDURES.csv.gz"), index=False)
+        D_LABITEMS_table.to_csv(os.path.join(self.out_dir, "D_LABITEMS.csv.gz"), index=False)
+        D_ITEMS_table.to_csv(os.path.join(self.out_dir, "D_ITEMS.csv.gz"), index=False)
 
         print(f"D_ICD_DIAGNOSES, D_ICD_PROCEDURES, D_LABITEMS, D_ITEMS processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -268,7 +270,7 @@ class Build_MIMIC_III(Sampler):
         print("Processing DIAGNOSES_ICD table")
         start_time = time.time()
 
-        DIAGNOSES_ICD_table = read_csv(self.data_dir, "DIAGNOSES_ICD.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICD9_CODE"], lower=True)
+        DIAGNOSES_ICD_table = read_csv(self.data_dir, "DIAGNOSES_ICD.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICD9_CODE"], lower=True)
         DIAGNOSES_ICD_table = DIAGNOSES_ICD_table.astype({"ICD9_CODE": str})
         DIAGNOSES_ICD_table = DIAGNOSES_ICD_table.dropna(subset=["ICD9_CODE"])
         DIAGNOSES_ICD_table["CHARTTIME"] = [
@@ -287,7 +289,7 @@ class Build_MIMIC_III(Sampler):
             DIAGNOSES_ICD_table = DIAGNOSES_ICD_table[TIME >= self.start_pivot_datetime]
 
         DIAGNOSES_ICD_table["ROW_ID"] = range(len(DIAGNOSES_ICD_table))
-        DIAGNOSES_ICD_table.to_csv(os.path.join(self.out_dir, "DIAGNOSES_ICD.csv"), index=False)
+        DIAGNOSES_ICD_table.to_csv(os.path.join(self.out_dir, "DIAGNOSES_ICD.csv.gz"), index=False)
 
         print(f"DIAGNOSES_ICD processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -295,7 +297,7 @@ class Build_MIMIC_III(Sampler):
         print("Processing PROCEDURES_ICD table")
         start_time = time.time()
 
-        PROCEDURES_ICD_table = read_csv(self.data_dir, "PROCEDURES_ICD.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICD9_CODE"], lower=True)
+        PROCEDURES_ICD_table = read_csv(self.data_dir, "PROCEDURES_ICD.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICD9_CODE"], lower=True)
         PROCEDURES_ICD_table = PROCEDURES_ICD_table.astype({"ICD9_CODE": str})
         PROCEDURES_ICD_table["CHARTTIME"] = [
             self.HADM_ID2dischtime_dict[hadm] if hadm in self.HADM_ID2dischtime_dict else None for hadm in PROCEDURES_ICD_table["HADM_ID"].values
@@ -313,7 +315,7 @@ class Build_MIMIC_III(Sampler):
             PROCEDURES_ICD_table = PROCEDURES_ICD_table[TIME >= self.start_pivot_datetime]
 
         PROCEDURES_ICD_table["ROW_ID"] = range(len(PROCEDURES_ICD_table))
-        PROCEDURES_ICD_table.to_csv(os.path.join(self.out_dir, "PROCEDURES_ICD.csv"), index=False)
+        PROCEDURES_ICD_table.to_csv(os.path.join(self.out_dir, "PROCEDURES_ICD.csv.gz"), index=False)
 
         print(f"PROCEDURES_ICD processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -321,7 +323,7 @@ class Build_MIMIC_III(Sampler):
         print("Processing LABEVENTS table")
         start_time = time.time()
 
-        LABEVENTS_table = read_csv(self.data_dir, "LABEVENTS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ITEMID", "CHARTTIME", "VALUENUM", "VALUEUOM"], lower=True)
+        LABEVENTS_table = read_csv(self.data_dir, "LABEVENTS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ITEMID", "CHARTTIME", "VALUENUM", "VALUEUOM"], lower=True)
         LABEVENTS_table = LABEVENTS_table.dropna(subset=["HADM_ID", "VALUENUM", "VALUEUOM"])
 
         LABEVENTS_table = LABEVENTS_table[LABEVENTS_table["ITEMID"].isin(self.D_LABITEMS_dict)]
@@ -336,7 +338,7 @@ class Build_MIMIC_III(Sampler):
             LABEVENTS_table = LABEVENTS_table[TIME >= self.start_pivot_datetime]
 
         LABEVENTS_table["ROW_ID"] = range(len(LABEVENTS_table))
-        LABEVENTS_table.to_csv(os.path.join(self.out_dir, "LABEVENTS.csv"), index=False)
+        LABEVENTS_table.to_csv(os.path.join(self.out_dir, "LABEVENTS.csv.gz"), index=False)
 
         print(f"LABEVENTS processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -345,7 +347,7 @@ class Build_MIMIC_III(Sampler):
         start_time = time.time()
 
         PRESCRIPTIONS_table = read_csv(
-            self.data_dir, "PRESCRIPTIONS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "STARTDATE", "ENDDATE", "DRUG", "DOSE_VAL_RX", "DOSE_UNIT_RX", "ROUTE"], lower=True
+            self.data_dir, "PRESCRIPTIONS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "STARTDATE", "ENDDATE", "DRUG", "DOSE_VAL_RX", "DOSE_UNIT_RX", "ROUTE"], lower=True
         )
         PRESCRIPTIONS_table = PRESCRIPTIONS_table.dropna(subset=["STARTDATE", "ENDDATE", "DOSE_VAL_RX", "DOSE_UNIT_RX", "ROUTE"])
         PRESCRIPTIONS_table["DOSE_VAL_RX"] = [int(str(v).replace(",", "")) if str(v).replace(",", "").isnumeric() else None for v in PRESCRIPTIONS_table["DOSE_VAL_RX"].values]
@@ -373,7 +375,7 @@ class Build_MIMIC_III(Sampler):
             PRESCRIPTIONS_table = PRESCRIPTIONS_table[TIME >= self.start_pivot_datetime]
 
         PRESCRIPTIONS_table["ROW_ID"] = range(len(PRESCRIPTIONS_table))
-        PRESCRIPTIONS_table.to_csv(os.path.join(self.out_dir, "PRESCRIPTIONS.csv"), index=False)
+        PRESCRIPTIONS_table.to_csv(os.path.join(self.out_dir, "PRESCRIPTIONS.csv.gz"), index=False)
 
         print(f"PRESCRIPTIONS processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -381,10 +383,10 @@ class Build_MIMIC_III(Sampler):
         print("Processing COST table")
         start_time = time.time()
 
-        DIAGNOSES_ICD_table = read_csv(self.out_dir, "DIAGNOSES_ICD.csv").astype({"ICD9_CODE": str})
-        LABEVENTS_table = read_csv(self.out_dir, "LABEVENTS.csv")
-        PROCEDURES_ICD_table = read_csv(self.out_dir, "PROCEDURES_ICD.csv").astype({"ICD9_CODE": str})
-        PRESCRIPTIONS_table = read_csv(self.out_dir, "PRESCRIPTIONS.csv")
+        DIAGNOSES_ICD_table = read_csv(self.out_dir, "DIAGNOSES_ICD.csv.gz").astype({"ICD9_CODE": str})
+        LABEVENTS_table = read_csv(self.out_dir, "LABEVENTS.csv.gz")
+        PROCEDURES_ICD_table = read_csv(self.out_dir, "PROCEDURES_ICD.csv.gz").astype({"ICD9_CODE": str})
+        PRESCRIPTIONS_table = read_csv(self.out_dir, "PRESCRIPTIONS.csv.gz")
 
         cnt = 0
         data_filter = []
@@ -475,7 +477,7 @@ class Build_MIMIC_III(Sampler):
         data_filter.append(temp)
 
         COST_table = pd.concat(data_filter, ignore_index=True)
-        COST_table.to_csv(os.path.join(self.out_dir, "COST.csv"), index=False)
+        COST_table.to_csv(os.path.join(self.out_dir, "COST.csv.gz"), index=False)
         print(f"COST processed (took {round(time.time() - start_time, 4)} secs)")
 
     def build_chartevent_table(self):
@@ -483,7 +485,7 @@ class Build_MIMIC_III(Sampler):
         start_time = time.time()
 
         CHARTEVENTS_table = read_csv(
-            self.data_dir, "CHARTEVENTS.csv", dtype={"SUBJECT_ID": int,"ITEMID": str, "ICUSTAY_ID": "float64", "RESULTSTATUS": "object", "CGID": "float64", "ERROR": "float64", "STOPPED": "object", "VALUE": "object", "WARNING": "float64"},
+            self.data_dir, "CHARTEVENTS.csv.gz", dtype={"SUBJECT_ID": int,"ITEMID": str, "ICUSTAY_ID": "float64", "RESULTSTATUS": "object", "CGID": "float64", "ERROR": "float64", "STOPPED": "object", "VALUE": "object", "WARNING": "float64"},
                                                                        columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "ITEMID", "CHARTTIME", "VALUENUM", "VALUEUOM"], lower=True,
                                                                        filter={"ITEMID": self.chartevent2itemid.values(), "SUBJECT_ID": self.patient_list},                                                                       
                                                                        memory_efficient=True)
@@ -503,14 +505,14 @@ class Build_MIMIC_III(Sampler):
             CHARTEVENTS_table = CHARTEVENTS_table[TIME >= self.start_pivot_datetime]
 
         CHARTEVENTS_table["ROW_ID"] = range(len(CHARTEVENTS_table))
-        CHARTEVENTS_table.to_csv(os.path.join(self.out_dir, "CHARTEVENTS.csv"), index=False)
+        CHARTEVENTS_table.to_csv(os.path.join(self.out_dir, "CHARTEVENTS.csv.gz"), index=False)
         print(f"CHARTEVENTS processed (took {round(time.time() - start_time, 4)} secs)")
 
     def build_inputevent_table(self):
         print("Processing INPUTEVENTS_CV table")
         start_time = time.time()
 
-        INPUTEVENTS_table = read_csv(self.data_dir, "INPUTEVENTS_CV.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "AMOUNT", "AMOUNTUOM"], lower=True)
+        INPUTEVENTS_table = read_csv(self.data_dir, "INPUTEVENTS_CV.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "AMOUNT", "AMOUNTUOM"], lower=True)
         INPUTEVENTS_table = INPUTEVENTS_table.dropna(subset=["HADM_ID", "ICUSTAY_ID", "AMOUNT", "AMOUNTUOM"])
         INPUTEVENTS_table = INPUTEVENTS_table[INPUTEVENTS_table["AMOUNTUOM"] == "ml"]
         del INPUTEVENTS_table["AMOUNTUOM"]
@@ -527,7 +529,7 @@ class Build_MIMIC_III(Sampler):
             INPUTEVENTS_table = INPUTEVENTS_table[TIME >= self.start_pivot_datetime]
 
         INPUTEVENTS_table["ROW_ID"] = range(len(INPUTEVENTS_table))
-        INPUTEVENTS_table.to_csv(os.path.join(self.out_dir, "INPUTEVENTS_CV.csv"), index=False)
+        INPUTEVENTS_table.to_csv(os.path.join(self.out_dir, "INPUTEVENTS_CV.csv.gz"), index=False)
 
         print(f"INPUTEVENTS_CV processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -535,7 +537,7 @@ class Build_MIMIC_III(Sampler):
         print("Processing OUTPUTEVENTS table")
         start_time = time.time()
 
-        OUTPUTEVENTS_table = read_csv(self.data_dir, "OUTPUTEVENTS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "VALUE", "VALUEUOM"], lower=True)
+        OUTPUTEVENTS_table = read_csv(self.data_dir, "OUTPUTEVENTS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "ICUSTAY_ID", "CHARTTIME", "ITEMID", "VALUE", "VALUEUOM"], lower=True)
         OUTPUTEVENTS_table = OUTPUTEVENTS_table.dropna(subset=["HADM_ID", "ICUSTAY_ID", "VALUE", "VALUEUOM"])
         OUTPUTEVENTS_table = OUTPUTEVENTS_table[OUTPUTEVENTS_table["VALUEUOM"] == "ml"]
         del OUTPUTEVENTS_table["VALUEUOM"]
@@ -552,7 +554,7 @@ class Build_MIMIC_III(Sampler):
             OUTPUTEVENTS_table = OUTPUTEVENTS_table[TIME >= self.start_pivot_datetime]
 
         OUTPUTEVENTS_table["ROW_ID"] = range(len(OUTPUTEVENTS_table))
-        OUTPUTEVENTS_table.to_csv(os.path.join(self.out_dir, "OUTPUTEVENTS.csv"), index=False)
+        OUTPUTEVENTS_table.to_csv(os.path.join(self.out_dir, "OUTPUTEVENTS.csv.gz"), index=False)
 
         print(f"OUTPUTEVENTS processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -560,7 +562,7 @@ class Build_MIMIC_III(Sampler):
         print("Processing MICROBIOLOGYEVENTS table")
         start_time = time.time()
 
-        MICROBIOLOGYEVENTS_table = read_csv(self.data_dir, "MICROBIOLOGYEVENTS.csv", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "CHARTDATE", "CHARTTIME", "SPEC_TYPE_DESC", "ORG_NAME"], lower=True)
+        MICROBIOLOGYEVENTS_table = read_csv(self.data_dir, "MICROBIOLOGYEVENTS.csv.gz", columns=["ROW_ID", "SUBJECT_ID", "HADM_ID", "CHARTDATE", "CHARTTIME", "SPEC_TYPE_DESC", "ORG_NAME"], lower=True)
         MICROBIOLOGYEVENTS_table["CHARTTIME"] = MICROBIOLOGYEVENTS_table["CHARTTIME"].fillna(MICROBIOLOGYEVENTS_table["CHARTDATE"])
         MICROBIOLOGYEVENTS_table = MICROBIOLOGYEVENTS_table.drop(columns=["CHARTDATE"])
         if self.deid:
@@ -576,60 +578,60 @@ class Build_MIMIC_III(Sampler):
             MICROBIOLOGYEVENTS_table = MICROBIOLOGYEVENTS_table[TIME >= self.start_pivot_datetime]
 
         MICROBIOLOGYEVENTS_table["ROW_ID"] = range(len(MICROBIOLOGYEVENTS_table))
-        MICROBIOLOGYEVENTS_table.to_csv(os.path.join(self.out_dir, "MICROBIOLOGYEVENTS.csv"), index=False)
+        MICROBIOLOGYEVENTS_table.to_csv(os.path.join(self.out_dir, "MICROBIOLOGYEVENTS.csv.gz"), index=False)
 
         print(f"MICROBIOLOGYEVENTS processed (took {round(time.time() - start_time, 4)} secs)")
 
     def generate_db(self):
-        rows = read_csv(self.out_dir, "PATIENTS.csv")
+        rows = read_csv(self.out_dir, "PATIENTS.csv.gz")
         rows.to_sql("PATIENTS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "ADMISSIONS.csv")
+        rows = read_csv(self.out_dir, "ADMISSIONS.csv.gz")
         rows.to_sql("ADMISSIONS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "D_ICD_DIAGNOSES.csv").astype({"ICD9_CODE": str})
+        rows = read_csv(self.out_dir, "D_ICD_DIAGNOSES.csv.gz").astype({"ICD9_CODE": str})
         rows.to_sql("D_ICD_DIAGNOSES", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "D_ICD_PROCEDURES.csv").astype({"ICD9_CODE": str})
+        rows = read_csv(self.out_dir, "D_ICD_PROCEDURES.csv.gz").astype({"ICD9_CODE": str})
         rows.to_sql("D_ICD_PROCEDURES", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "D_ITEMS.csv")
+        rows = read_csv(self.out_dir, "D_ITEMS.csv.gz")
         rows.to_sql("D_ITEMS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "D_LABITEMS.csv")
+        rows = read_csv(self.out_dir, "D_LABITEMS.csv.gz")
         rows.to_sql("D_LABITEMS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "DIAGNOSES_ICD.csv").astype({"ICD9_CODE": str})
+        rows = read_csv(self.out_dir, "DIAGNOSES_ICD.csv.gz").astype({"ICD9_CODE": str})
         rows.to_sql("DIAGNOSES_ICD", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "PROCEDURES_ICD.csv").astype({"ICD9_CODE": str})
+        rows = read_csv(self.out_dir, "PROCEDURES_ICD.csv.gz").astype({"ICD9_CODE": str})
         rows.to_sql("PROCEDURES_ICD", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "LABEVENTS.csv")
+        rows = read_csv(self.out_dir, "LABEVENTS.csv.gz")
         rows.to_sql("LABEVENTS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "PRESCRIPTIONS.csv")
+        rows = read_csv(self.out_dir, "PRESCRIPTIONS.csv.gz")
         rows.to_sql("PRESCRIPTIONS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "COST.csv")
+        rows = read_csv(self.out_dir, "COST.csv.gz")
         rows.to_sql("COST", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "CHARTEVENTS.csv")
+        rows = read_csv(self.out_dir, "CHARTEVENTS.csv.gz")
         rows.to_sql("CHARTEVENTS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "INPUTEVENTS_CV.csv")
+        rows = read_csv(self.out_dir, "INPUTEVENTS_CV.csv.gz")
         rows.to_sql("INPUTEVENTS_CV", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "OUTPUTEVENTS.csv")
+        rows = read_csv(self.out_dir, "OUTPUTEVENTS.csv.gz")
         rows.to_sql("OUTPUTEVENTS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "MICROBIOLOGYEVENTS.csv")
+        rows = read_csv(self.out_dir, "MICROBIOLOGYEVENTS.csv.gz")
         rows.to_sql("MICROBIOLOGYEVENTS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "ICUSTAYS.csv")
+        rows = read_csv(self.out_dir, "ICUSTAYS.csv.gz")
         rows.to_sql("ICUSTAYS", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "TRANSFERS.csv")
+        rows = read_csv(self.out_dir, "TRANSFERS.csv.gz")
         rows.to_sql("TRANSFERS", self.conn, if_exists="append", index=False)
 
         query = "SELECT * FROM sqlite_master WHERE type='table'"

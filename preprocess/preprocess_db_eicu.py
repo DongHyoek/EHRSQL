@@ -70,7 +70,7 @@ class Build_eICU(Sampler):
         # read patients
         patient_table = read_csv(
             self.data_dir,
-            "patient.csv",
+            "patient.csv.gz",
             columns=[
                 "uniquepid",
                 "patienthealthsystemstayid",
@@ -215,7 +215,7 @@ class Build_eICU(Sampler):
         patient_table = patient_table[patient_table["uniquepid"].isin(self.patient_list)]
         self.icu_list = patient_table["patientunitstayid"].values.tolist()
 
-        patient_table.to_csv(os.path.join(self.out_dir, "patient.csv"), index=False)
+        patient_table.to_csv(os.path.join(self.out_dir, "patient.csv.gz"), index=False)
 
         print(f"patient processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -223,7 +223,7 @@ class Build_eICU(Sampler):
         print("Processing diagnosis table")
         start_time = time.time()
 
-        diagnosis_table = read_csv(self.data_dir, "diagnosis.csv", columns=["diagnosisid", "patientunitstayid", "diagnosisoffset", "diagnosisstring", "icd9code"], lower=True)
+        diagnosis_table = read_csv(self.data_dir, "diagnosis.csv.gz", columns=["diagnosisid", "patientunitstayid", "diagnosisoffset", "diagnosisstring", "icd9code"], lower=True)
 
         # filtering out diagnosis
         paths12_34 = [["|".join(path.split("|")[:2]), "|".join(path.split("|")[2:4])] for path in diagnosis_table["diagnosisstring"].values]
@@ -250,7 +250,7 @@ class Build_eICU(Sampler):
         diagnosis_table = diagnosis_table[boolean]
         diagnosis_table["diagnosisname"] = [" - ".join(path.split("|")[2:4]) if len(path.split("|")) > 3 else path.split("|")[2] for path in diagnosis_table["diagnosisstring"].values]
         diagnosis_table = diagnosis_table.drop(columns=["diagnosisstring"])
-        combined_table = diagnosis_table.merge(pd.read_csv(f"{self.data_dir}/patient.csv")[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = diagnosis_table.merge(pd.read_csv(f"{self.data_dir}/patient.csv.gz", compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             diagnosis_table = self.condition_value_shuffler(combined_table, target_cols=["diagnosisname", "icd9code"])
         diagnosis_table = diagnosis_table[diagnosis_table["patientunitstayid"].isin(self.icu_list)]
@@ -261,7 +261,7 @@ class Build_eICU(Sampler):
         del diagnosis_table["uniquepid"]
 
         diagnosis_table["diagnosisid"] = range(len(diagnosis_table))
-        diagnosis_table.to_csv(os.path.join(self.out_dir, "diagnosis.csv"), index=False)
+        diagnosis_table.to_csv(os.path.join(self.out_dir, "diagnosis.csv.gz"), index=False)
 
         print(f"diagnosis processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -269,7 +269,7 @@ class Build_eICU(Sampler):
         print("Processing treatment table")
         start_time = time.time()
 
-        treatment_table = read_csv(self.data_dir, "treatment.csv", columns=["treatmentid", "patientunitstayid", "treatmentoffset", "treatmentstring"], lower=True)
+        treatment_table = read_csv(self.data_dir, "treatment.csv.gz", columns=["treatmentid", "patientunitstayid", "treatmentoffset", "treatmentstring"], lower=True)
 
         # filtering out treatment
         paths12_34 = [["|".join(path.split("|")[:2]), "|".join(path.split("|")[2:4])] for path in treatment_table["treatmentstring"].values]
@@ -296,7 +296,7 @@ class Build_eICU(Sampler):
         treatment_table = treatment_table[boolean]
         treatment_table["treatmentname"] = [" - ".join(path.split("|")[2:4]) if len(path.split("|")) > 3 else path.split("|")[2] for path in treatment_table["treatmentstring"].values]
         treatment_table = treatment_table.drop(columns=["treatmentstring"])
-        combined_table = treatment_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = treatment_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             treatment_table = self.condition_value_shuffler(combined_table, target_cols=["treatmentname"])
         treatment_table = treatment_table[treatment_table["patientunitstayid"].isin(self.icu_list)]
@@ -307,7 +307,7 @@ class Build_eICU(Sampler):
         del treatment_table["uniquepid"]
 
         treatment_table["treatmentid"] = range(len(treatment_table))
-        treatment_table.to_csv(os.path.join(self.out_dir, "treatment.csv"), index=False)
+        treatment_table.to_csv(os.path.join(self.out_dir, "treatment.csv.gz"), index=False)
 
         print(f"treatment processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -315,10 +315,10 @@ class Build_eICU(Sampler):
         print("Processing lab table")
         start_time = time.time()
 
-        lab_table = read_csv(self.data_dir, "lab.csv", columns=["labid", "patientunitstayid", "labresultoffset", "labname", "labresult"], lower=True)
+        lab_table = read_csv(self.data_dir, "lab.csv.gz", columns=["labid", "patientunitstayid", "labresultoffset", "labname", "labresult"], lower=True)
         lab_table = lab_table.dropna(subset=["labresult"])
 
-        combined_table = lab_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = lab_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             lab_table = self.condition_value_shuffler(combined_table, target_cols=["labname", "labresult"])
         lab_table = lab_table[lab_table["patientunitstayid"].isin(self.icu_list)]
@@ -329,7 +329,7 @@ class Build_eICU(Sampler):
         del lab_table["uniquepid"]
 
         lab_table["labid"] = range(len(lab_table))
-        lab_table.to_csv(os.path.join(self.out_dir, "lab.csv"), index=False)
+        lab_table.to_csv(os.path.join(self.out_dir, "lab.csv.gz"), index=False)
 
         print(f"lab processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -338,13 +338,13 @@ class Build_eICU(Sampler):
         start_time = time.time()
 
         medication_table = read_csv(
-            self.data_dir, "medication.csv", columns=["medicationid", "patientunitstayid", "drugstartoffset", "drugstopoffset", "drugname", "dosage", "routeadmin", "drugordercancelled"], lower=True
+            self.data_dir, "medication.csv.gz", columns=["medicationid", "patientunitstayid", "drugstartoffset", "drugstopoffset", "drugname", "dosage", "routeadmin", "drugordercancelled"], lower=True
         )
         medication_table = medication_table.dropna(subset=["drugname", "dosage", "routeadmin"])
         medication_table = medication_table[medication_table["drugordercancelled"] == "no"]
         medication_table = medication_table.drop(columns=["drugordercancelled"])
 
-        combined_table = medication_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = medication_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             medication_table = self.condition_value_shuffler(combined_table, target_cols=["drugname", "dosage", "routeadmin"])
         medication_table = medication_table[medication_table["patientunitstayid"].isin(self.icu_list)]
@@ -356,7 +356,7 @@ class Build_eICU(Sampler):
         del medication_table["uniquepid"]
 
         medication_table["medicationid"] = range(len(medication_table))
-        medication_table.to_csv(os.path.join(self.out_dir, "medication.csv"), index=False)
+        medication_table.to_csv(os.path.join(self.out_dir, "medication.csv.gz"), index=False)
 
         print(f"medication completed! (took {round(time.time() - start_time, 4)} secs)")
 
@@ -364,10 +364,10 @@ class Build_eICU(Sampler):
         print("Processing cost table")
         start_time = time.time()
 
-        diagnosis_table = read_csv(self.out_dir, "diagnosis.csv")
-        lab_table = read_csv(self.out_dir, "lab.csv")
-        treatment_table = read_csv(self.out_dir, "treatment.csv")
-        medication_table = read_csv(self.out_dir, "medication.csv")
+        diagnosis_table = read_csv(self.out_dir, "diagnosis.csv.gz")
+        lab_table = read_csv(self.out_dir, "lab.csv.gz")
+        treatment_table = read_csv(self.out_dir, "treatment.csv.gz")
+        medication_table = read_csv(self.out_dir, "medication.csv.gz")
 
         cnt = 0
         data_filter = []
@@ -458,16 +458,16 @@ class Build_eICU(Sampler):
         data_filter.append(temp)
 
         cost_table = pd.concat(data_filter, ignore_index=True)
-        cost_table.to_csv(os.path.join(self.out_dir, "cost.csv"), index=False)
+        cost_table.to_csv(os.path.join(self.out_dir, "cost.csv.gz"), index=False)
         print(f"cost processed (took {round(time.time() - start_time, 4)} secs)")
 
     def build_allergy_table(self):
         print("Processing allergy table")
         start_time = time.time()
 
-        allergy_table = read_csv(self.data_dir, "allergy.csv", columns=["allergyid", "patientunitstayid", "allergyoffset", "drugname", "allergyname"], lower=True)
+        allergy_table = read_csv(self.data_dir, "allergy.csv.gz", columns=["allergyid", "patientunitstayid", "allergyoffset", "drugname", "allergyname"], lower=True)
 
-        combined_table = allergy_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = allergy_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             allergy_table = self.condition_value_shuffler(combined_table, target_cols=["allergyname", "drugname"])
         allergy_table = allergy_table[allergy_table["patientunitstayid"].isin(self.icu_list)]
@@ -478,7 +478,7 @@ class Build_eICU(Sampler):
         del allergy_table["uniquepid"]
 
         allergy_table["allergyid"] = range(len(allergy_table))
-        allergy_table.to_csv(os.path.join(self.out_dir, "allergy.csv"), index=False)
+        allergy_table.to_csv(os.path.join(self.out_dir, "allergy.csv.gz"), index=False)
 
         print(f"allergy processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -486,7 +486,7 @@ class Build_eICU(Sampler):
         print("Processing intakeOutput table")
         start_time = time.time()
 
-        intakeoutput_table = read_csv(self.data_dir, "intakeOutput.csv", columns=["intakeoutputid", "patientunitstayid", "intakeoutputoffset", "cellpath", "celllabel", "cellvaluenumeric"], lower=True)
+        intakeoutput_table = read_csv(self.data_dir, "intakeOutput.csv.gz", columns=["intakeoutputid", "patientunitstayid", "intakeoutputoffset", "cellpath", "celllabel", "cellvaluenumeric"], lower=True)
 
         valid_intake_unit = intakeoutput_table["cellpath"].apply(lambda x: True if "intake (ml)" in x else False)
         valid_output_unit = intakeoutput_table["cellpath"].apply(lambda x: True if "output (ml)" in x else False)
@@ -496,7 +496,7 @@ class Build_eICU(Sampler):
         intakeoutput_table["celllabel"] = intakeoutput_table["celllabel"].apply(lambda x: " ".join(x.split()[:-1]) if x.split()[-1] == "intake" else x)
         intakeoutput_table["celllabel"] = intakeoutput_table["celllabel"].apply(lambda x: " ".join(x.split()[:-1]) if x.split()[-1] == "output" else x)
 
-        combined_table = intakeoutput_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = intakeoutput_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             intakeoutput_table = self.condition_value_shuffler(combined_table, target_cols=["celllabel", "cellpath", "cellvaluenumeric"])
         intakeoutput_table = intakeoutput_table[intakeoutput_table["patientunitstayid"].isin(self.icu_list)]
@@ -509,7 +509,7 @@ class Build_eICU(Sampler):
         del intakeoutput_table["uniquepid"]
 
         intakeoutput_table["intakeoutputid"] = range(len(intakeoutput_table))
-        intakeoutput_table.to_csv(os.path.join(self.out_dir, "intakeoutput.csv"), index=False)
+        intakeoutput_table.to_csv(os.path.join(self.out_dir, "intakeoutput.csv.gz"), index=False)
 
         print(f"intakeOutput processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -517,9 +517,9 @@ class Build_eICU(Sampler):
         print("Processing microLab table")
         start_time = time.time()
 
-        microlab_table = read_csv(self.data_dir, "microLab.csv", columns=["microlabid", "patientunitstayid", "culturetakenoffset", "culturesite", "organism"], lower=True)
+        microlab_table = read_csv(self.data_dir, "microLab.csv.gz", columns=["microlabid", "patientunitstayid", "culturetakenoffset", "culturesite", "organism"], lower=True)
 
-        combined_table = microlab_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
+        combined_table = microlab_table.merge(pd.read_csv(f'{self.data_dir}/{"patient"}.csv.gz', compression='gzip')[["patientunitstayid", "uniquepid"]], how="inner", on="patientunitstayid")
         if self.deid:
             microlab_table = self.condition_value_shuffler(combined_table, target_cols=["culturesite", "organism"])
         microlab_table = microlab_table[microlab_table["patientunitstayid"].isin(self.icu_list)]
@@ -530,7 +530,7 @@ class Build_eICU(Sampler):
         del microlab_table["uniquepid"]
 
         microlab_table["microlabid"] = range(len(microlab_table))
-        microlab_table.to_csv(os.path.join(self.out_dir, "microlab.csv"), index=False)
+        microlab_table.to_csv(os.path.join(self.out_dir, "microlab.csv.gz"), index=False)
 
         print(f"microLab processed (took {round(time.time() - start_time, 4)} secs)")
 
@@ -540,7 +540,7 @@ class Build_eICU(Sampler):
 
         vital_table = read_csv(
             self.data_dir,
-            "vitalPeriodic.csv",
+            "vitalPeriodic.csv.gz",
             dtype={
                 "vitalperiodicid": int,
                 "patientunitstayid": int,
@@ -564,39 +564,39 @@ class Build_eICU(Sampler):
         vital_table = vital_table.dropna(subset=["observationtime"])
 
         vital_table["vitalperiodicid"] = range(len(vital_table))
-        vital_table.to_csv(os.path.join(self.out_dir, "vitalperiodic.csv"), index=False)
+        vital_table.to_csv(os.path.join(self.out_dir, "vitalperiodic.csv.gz"), index=False)
 
         print(f"vitalperiodic processed (took {round(time.time() - start_time, 4)} secs)")
 
     def generate_db(self):
-        rows = read_csv(self.out_dir, "patient.csv")
+        rows = read_csv(self.out_dir, "patient.csv.gz")
         rows.to_sql("patient", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "diagnosis.csv")
+        rows = read_csv(self.out_dir, "diagnosis.csv.gz")
         rows.to_sql("diagnosis", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "treatment.csv")
+        rows = read_csv(self.out_dir, "treatment.csv.gz")
         rows.to_sql("treatment", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "lab.csv")
+        rows = read_csv(self.out_dir, "lab.csv.gz")
         rows.to_sql("lab", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "medication.csv")
+        rows = read_csv(self.out_dir, "medication.csv.gz")
         rows.to_sql("medication", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "cost.csv")
+        rows = read_csv(self.out_dir, "cost.csv.gz")
         rows.to_sql("cost", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "intakeoutput.csv")
+        rows = read_csv(self.out_dir, "intakeoutput.csv.gz")
         rows.to_sql("intakeoutput", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "microlab.csv")
+        rows = read_csv(self.out_dir, "microlab.csv.gz")
         rows.to_sql("microlab", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "allergy.csv")
+        rows = read_csv(self.out_dir, "allergy.csv.gz")
         rows.to_sql("allergy", self.conn, if_exists="append", index=False)
 
-        rows = read_csv(self.out_dir, "vitalperiodic.csv")
+        rows = read_csv(self.out_dir, "vitalperiodic.csv.gz")
         rows.to_sql("vitalperiodic", self.conn, if_exists="append", index=False)
 
         query = "SELECT * FROM sqlite_master WHERE type='table'"
